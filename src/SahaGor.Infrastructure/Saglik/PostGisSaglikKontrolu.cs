@@ -23,8 +23,14 @@ public sealed class PostGisSaglikKontrolu : IHealthCheck
     {
         try
         {
+            // EF Core'un skaler SqlQuery<T> ozelligi, sonuc kolonunun "Value" olarak
+            // adlandirilmis olmasini BEKLER (kendi ic sorgusunu "SELECT t."Value" FROM (...) AS t"
+            // seklinde sarar); PostGIS_version() fonksiyonunun ham sutun adi bu degildir, bu
+            // yuzden acikca "Value" olarak takma ad verilmelidir - aksi halde gercek Postgres'e
+            // karsi "column t.Value does not exist" hatasiyla patlar (InMemory saglayicisinda
+            // SqlQuery zaten desteklenmedigi/calisitirilmadigi icin bu daha once fark edilmemisti).
             var postgisSurumu = await _dbContext.Database
-                .SqlQuery<string>($"SELECT PostGIS_version()")
+                .SqlQuery<string>($"SELECT PostGIS_version() AS \"Value\"")
                 .FirstOrDefaultAsync(cancellationToken);
 
             var veriler = new Dictionary<string, object>
