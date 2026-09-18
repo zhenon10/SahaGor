@@ -43,11 +43,18 @@ public class Bolge : TemelVarlik
         SinirPolygonu = sinirPolygonu ?? throw new ArgumentNullException(nameof(sinirPolygonu));
     }
 
-    /// <summary>Verilen noktanin bu bolgenin sinirlari icinde olup olmadigini kontrol eder (PostGIS ST_Contains).</summary>
+    /// <summary>
+    /// Verilen noktanin bu bolgenin sinirlari icinde olup olmadigini kontrol eder (PostGIS ST_Covers).
+    /// Bilerek ST_Contains DEGIL ST_Covers kullanilir: ST_Contains, "geography" kolon tipi icin
+    /// PostGIS'te TANIMLI DEGILDIR (sadece "geometry" icin vardir) ve SinirPolygonu geography
+    /// olarak saklanir (bkz. BolgeConfiguration). ST_Covers hem geography'de calisir hem de
+    /// ST_Contains'in siniri (boundary) kapsam disi birakan durumunu (nokta tam sinirdaysa
+    /// "disarida" sayilmasi) daha sezgisel bir sekilde cozer.
+    /// </summary>
     public bool NoktayiKapsiyorMu(Point nokta)
     {
         ArgumentNullException.ThrowIfNull(nokta);
-        return SinirPolygonu.Contains(nokta);
+        return SinirPolygonu.Covers(nokta);
     }
 
     public void SorumluBirimAta(Guid birimId)

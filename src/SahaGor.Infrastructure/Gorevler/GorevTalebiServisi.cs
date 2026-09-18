@@ -17,7 +17,7 @@ namespace SahaGor.Infrastructure.Gorevler;
 /// <summary>
 /// GorevTalebi CRUD ve coğrafi sorgularin EF Core/PostGIS implementasyonu. Yakin konum ve
 /// bolge eslestirme sorgulari, NetTopologySuite'in Npgsql eklentisi araciligiyla dogrudan
-/// ST_DWithin/ST_Distance/ST_Contains fonksiyonlarina cevrilir.
+/// ST_DWithin/ST_Distance/ST_Covers fonksiyonlarina cevrilir.
 /// </summary>
 public sealed class GorevTalebiServisi : IGorevTalebiServisi
 {
@@ -73,8 +73,11 @@ public sealed class GorevTalebiServisi : IGorevTalebiServisi
 
         // Otomatik bolgelendirme (SG-115): konumu kapsayan ilk bolge bulunursa atanir;
         // hicbir bolge eslesmezse gorev "bolge disi" olarak (BolgeId = null) acik kalir.
+        // ST_Contains DEGIL ST_Covers kullanilir; SinirPolygonu "geography" oldugundan ve
+        // PostGIS'te ST_Contains geography icin tanimli olmadigindan bu bilinctli bir secimdir
+        // (bkz. Bolge.NoktayiKapsiyorMu ustundeki aciklama, SG-420).
         var kapsayanBolge = await _dbContext.Bolgeler
-            .FirstOrDefaultAsync(b => b.SinirPolygonu.Contains(konum), iptalToken);
+            .FirstOrDefaultAsync(b => b.SinirPolygonu.Covers(konum), iptalToken);
 
         if (kapsayanBolge is not null)
         {
