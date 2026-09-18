@@ -1,0 +1,17 @@
+# SahaGor.Api Docker build baglami icin (build context: repo koku).
+**/bin/
+**/obj/
+**/.vs/
+**/*.user
+
+tests/
+mobile/
+web/
+infra/
+
+.git/
+.github/
+*.md
+.env
+.env.*
+!.env.example

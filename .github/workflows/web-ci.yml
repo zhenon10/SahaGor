@@ -1,0 +1,44 @@
+name: Web CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/web-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/web-ci.yml"
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Kodu getir
+        uses: actions/checkout@v4
+
+      - name: Node.js kurulumu
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Bagimliliklari yukle
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # "next build" ayni zamanda TypeScript tip kontrolunu de calistirir; CI'da gercek bir
+      # API'ye baglanilmadigindan (bkz. src/lib/ortam.ts) sadece build'in gecmesi icin bir
+      # yer tutucu adres verilir.
+      - name: Build (TypeScript tip kontrolu dahil)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:5299

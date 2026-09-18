@@ -1,0 +1,60 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "SahaGor.sln"
+      - "Directory.Build.props"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "SahaGor.sln"
+      - "Directory.Build.props"
+      - ".github/workflows/backend-ci.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodu getir
+        uses: actions/checkout@v4
+
+      - name: .NET 8 SDK kurulumu
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Bagimliliklari geri yukle
+        run: dotnet restore SahaGor.sln
+
+      - name: Derle (Release)
+        run: dotnet build SahaGor.sln --configuration Release --no-restore
+
+      - name: Birim testlerini calistir
+        run: >
+          dotnet test tests/SahaGor.UnitTests/SahaGor.UnitTests.csproj
+          --configuration Release --no-build
+          --logger "trx;LogFileName=unit-tests.trx"
+
+      # SG-420: entegrasyon testleri gercek bir PostgreSQL/PostGIS konteyneri baslatir
+      # (Testcontainers). GitHub'in ubuntu-latest runner'inda Docker onceden kurulu geldigi
+      # icin ek bir kuruluma gerek yoktur.
+      - name: Entegrasyon testlerini calistir (Testcontainers/PostGIS)
+        run: >
+          dotnet test tests/SahaGor.IntegrationTests/SahaGor.IntegrationTests.csproj
+          --configuration Release --no-build
+          --logger "trx;LogFileName=integration-tests.trx"
+
+      - name: Test sonuclarini artifact olarak yukle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-test-sonuclari
+          path: "**/*.trx"
+          retention-days: 14

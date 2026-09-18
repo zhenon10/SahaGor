@@ -1,0 +1,62 @@
+# Production dagitimi icin docker-compose.yml'e EKLENEN katman (SG-422). Tek basina degil,
+# temel dosyayla birlikte kullanilir:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Gerekli ortam degiskenleri icin .env.example dosyasini ".env" olarak kopyalayip doldurun.
+services:
+  sahagor-api:
+    build:
+      context: .
+      dockerfile: src/SahaGor.Api/Dockerfile
+    container_name: sahagor-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      POSTGRES_HOST: sahagor-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-sahagor}
+      POSTGRES_USER: ${POSTGRES_USER:-sahagor_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env dosyasinda tanimlanmalidir}
+      # Cift alt cizgi (__), .NET'in IConfiguration'inda ic ice bolumlere (orn. "Jwt:Anahtar")
+      # karsilik gelir. Degerler appsettings.json'da BILEREK bos birakildi; env var olmadan
+      # uygulama Program.cs'teki fail-fast dogrulamasiyla baslangicta cokmelidir.
+      Jwt__Anahtar: ${JWT_ANAHTAR:?JWT_ANAHTAR .env dosyasinda tanimlanmalidir (en az 32 karakter)}
+      Entegrasyonlar__Hat153__PaylasilanGizliAnahtar: ${HAT153_GIZLI_ANAHTAR:?HAT153_GIZLI_ANAHTAR .env dosyasinda tanimlanmalidir (en az 16 karakter)}
+    ports:
+      - "${API_PORT:-5299}:8080"
+    volumes:
+      # Kanit fotograflari ve loglar, konteyner yeniden olusturulsa dahi kaybolmamali.
+      - sahagor-api-fotograflar:/app/App_Data/gorev-fotograflari
+      - sahagor-api-logs:/app/logs
+    depends_on:
+      sahagor-postgres:
+        condition: service_healthy
+    networks:
+      - sahagor-network
+
+  sahagor-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        # ONEMLI: Bu deger tarayiciya gonderilen JS paketine GOMULUR; bu yuzden hem tarayicidan
+        # (kullanicinin kendi bilgisayarindan) hem de bu konteynerin kendi icinden erisilebilir
+        # PUBLIC bir adres olmalidir (orn. "https://api.sahagor.example.com" veya sunucunun genel
+        # IP'si + API_PORT). "http://sahagor-api:8080" gibi ic Docker DNS adi KULLANILAMAZ, cunku
+        # tarayici bu adi cozemez. Degistirmek imajin yeniden olusturulmasini (--build) gerektirir.
+        NEXT_PUBLIC_API_BASE_URL: ${API_PUBLIC_BASE_URL:?API_PUBLIC_BASE_URL .env dosyasinda tanimlanmalidir}
+    container_name: sahagor-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      - sahagor-api
+    networks:
+      - sahagor-network
+
+volumes:
+  sahagor-api-fotograflar:
+    driver: local
+  sahagor-api-logs:
+    driver: local
