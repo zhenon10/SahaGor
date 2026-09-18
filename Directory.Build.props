@@ -1,0 +1,25 @@
+<Project>
+
+  <!--
+    Tum SahaGor projeleri (Domain/Application/Infrastructure/Api/Tests) icin ortak derleme ayarlari.
+    Her .csproj dosyasinda tekrar etmemesi (DRY) icin burada tek noktadan yonetilir.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Belediye personel/vatandas adlarinda (I, İ, ı, i) hatali karsilastirma olmamasi icin
+         kod genelinde degil, sadece framework globalizasyon davranisi icin invariant KAPALI birakildi. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+
+    <!-- Derleyici uyarilarini gormezden gelmek yerine erken yakalamak icin. -->
+    <WarningsAsErrors>Nullable</WarningsAsErrors>
+
+    <!-- Analizde her projede tekrar tanimlamamak icin merkezi paket surumu yonetimi kapali,
+         ancak surum tutarliligini kolaylastirmak icin Directory.Packages.props kullanilmiyor (ileride eklenebilir). -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>

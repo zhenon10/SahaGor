@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Ortak ayarlar icin bkz: /Directory.Build.props -->
+
+  <ItemGroup>
+    <!-- PostGIS geometri tiplerini (Point/Polygon) Domain katmaninda kullanabilmek icin. -->
+    <PackageReference Include="NetTopologySuite" Version="2.5.0" />
+  </ItemGroup>
+
+</Project>

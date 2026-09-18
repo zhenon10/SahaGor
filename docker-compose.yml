@@ -1,0 +1,54 @@
+services:
+  # PostgreSQL + PostGIS: Coğrafi konum sorguları (yakındaki görevler, bölge/mahalle eşleştirme) için kullanılır.
+  sahagor-postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: sahagor-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sahagor}
+      POSTGRES_USER: ${POSTGRES_USER:-sahagor_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env dosyasinda tanimlanmalidir}
+      # Turkce karakter siralamasi ve karsilastirmalari icin locale ayari.
+      LANG: tr_TR.UTF-8
+      LC_ALL: tr_TR.UTF-8
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Konteyner silinse/yeniden olusturulsa dahi veri kalici olsun diye adlandirilmis volume kullanilir.
+      - sahagor-postgres-data:/var/lib/postgresql/data
+      # Ilk kurulumda PostGIS uzantilarini otomatik aktif etmek icin init script.
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sahagor_user} -d ${POSTGRES_DB:-sahagor}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - sahagor-network
+
+  # pgAdmin: Gelistirme ortaminda veritabanini gorsel olarak incelemek icin (opsiyonel, sadece dev profile ile ayaga kalkar).
+  sahagor-pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: sahagor-pgadmin
+    restart: unless-stopped
+    profiles: ["dev-tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@sahagor.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      sahagor-postgres:
+        condition: service_healthy
+    networks:
+      - sahagor-network
+
+networks:
+  sahagor-network:
+    driver: bridge
+
+volumes:
+  sahagor-postgres-data:
+    driver: local

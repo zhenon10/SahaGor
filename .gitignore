@@ -1,0 +1,38 @@
+# --- Ortam degiskenleri / secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- .NET ---
+bin/
+obj/
+*.user
+*.suo
+.vs/
+logs/
+
+# --- Node / React Native / Next.js ---
+node_modules/
+.expo/
+.next/
+out/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Veritabani / Docker ---
+*.sql.bak
+
+# --- Yerel yuklenmis dosyalar (kanit fotograflari, dev/local depolama) ---
+App_Data/
+
+# --- IDE ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Isletim sistemi ---
+.DS_Store
+Thumbs.db

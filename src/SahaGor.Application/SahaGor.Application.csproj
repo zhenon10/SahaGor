@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Ortak ayarlar icin bkz: /Directory.Build.props -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\SahaGor.Domain\SahaGor.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

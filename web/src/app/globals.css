@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/*
+ * SahaGör komuta paneli, mobil uygulamayla ayni koyu ("komuta merkezi") temayi kullanir
+ * (bkz. mobile/src/ekranlar/*). Kullanicinin isletim sistemi tercihine gore degil,
+ * bilerek her zaman koyu temada acilir; bu bir tuketici uygulamasi degil, operasyonel
+ * bir izleme araci.
+ */
+:root {
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --yuzey: #1e293b;
+  --kenarlik: #334155;
+  --vurgu: #2563eb;
+  --sonuc: #94a3b8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-yuzey: var(--yuzey);
+  --color-kenarlik: var(--kenarlik);
+  --color-vurgu: var(--vurgu);
+  --color-sonuc: var(--sonuc);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
