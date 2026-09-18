@@ -36,6 +36,9 @@ jobs:
       # Sadece bu CI is'i icin uretilen, gercek/production ile ilgisi olmayan degerlerdir.
       Jwt__Anahtar: e2e-test-ortami-icin-en-az-32-karakter-uzunlugunda-anahtar-degeri
       Entegrasyonlar__Hat153__PaylasilanGizliAnahtar: e2e-test-ortami-icin-16-karakter-anahtar
+      # Web uygulamasi bu is'te http://localhost:3000'de calisir; tarayicidan yapilan
+      # kimlik dogrulamali API cagrilarinin CORS tarafindan engellenmemesi icin gereklidir.
+      Cors__IzinVerilenKaynaklar__0: http://localhost:3000
       API_BASE_URL: http://localhost:5299
 
     steps:

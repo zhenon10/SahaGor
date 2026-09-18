@@ -23,6 +23,9 @@ services:
       # uygulama Program.cs'teki fail-fast dogrulamasiyla baslangicta cokmelidir.
       Jwt__Anahtar: ${JWT_ANAHTAR:?JWT_ANAHTAR .env dosyasinda tanimlanmalidir (en az 32 karakter)}
       Entegrasyonlar__Hat153__PaylasilanGizliAnahtar: ${HAT153_GIZLI_ANAHTAR:?HAT153_GIZLI_ANAHTAR .env dosyasinda tanimlanmalidir (en az 16 karakter)}
+      # Web admin panelinin PUBLIC adresi (tarayicinin gordugu adres); CORS bu origin'e izin
+      # vermezse tarayicidan yapilan tum kimlik dogrulamali API cagrilari sessizce basarisiz olur.
+      Cors__IzinVerilenKaynaklar__0: ${WEB_PUBLIC_BASE_URL:?WEB_PUBLIC_BASE_URL .env dosyasinda tanimlanmalidir}
     ports:
       - "${API_PORT:-5299}:8080"
     volumes:

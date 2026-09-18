@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SahaGor.Api;
 using SahaGor.Api.ArkaPlanIsleri;
 using SahaGor.Api.Hatalar;
 using SahaGor.Api.Hublar;
@@ -94,6 +95,24 @@ try
         ?? throw new InvalidOperationException($"'{SlaAlarmAyarlari.BolumAdi}' yapilandirma bolumu bulunamadi.");
     slaAlarmAyarlari.Dogrula();
 
+    // Web admin paneli (Next.js) ile bu API farkli origin'lerde (farkli port dahi olsa)
+    // calisir; CORS yapilandirilmadan tarayicidan yapilan hicbir kimlik dogrulamali istek
+    // basariya ulasamaz (SG-421'de gercek bir tarayiciyla E2E test yazilirken bulunan hata).
+    const string CorsPolitikaAdi = "SahaGorWebPolitikasi";
+    var corsAyarlari = builder.Configuration.GetSection(CorsAyarlari.BolumAdi).Get<CorsAyarlari>()
+        ?? throw new InvalidOperationException($"'{CorsAyarlari.BolumAdi}' yapilandirma bolumu bulunamadi.");
+    corsAyarlari.Dogrula();
+
+    builder.Services.AddCors(corsOptions =>
+    {
+        corsOptions.AddPolicy(CorsPolitikaAdi, policy =>
+        {
+            policy.WithOrigins(corsAyarlari.IzinVerilenKaynaklar)
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+    });
+
     builder.Services
         .AddAuthentication(options =>
         {
@@ -177,6 +196,10 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    // CORS, kimlik dogrulama/yetkilendirmeden ONCE calismalidir; aksi halde on-kontrol
+    // (preflight OPTIONS) istekleri [Authorize] tarafindan reddedilir.
+    app.UseCors(CorsPolitikaAdi);
 
     // Kimlik dogrulama, yetkilendirmeden once calismalidir; aksi halde User.Identity
     // her zaman dogrulanmamis (anonim) kalir ve [Authorize] her istegi reddeder.
