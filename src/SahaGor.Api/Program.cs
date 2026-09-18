@@ -4,12 +4,14 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SahaGor.Api.ArkaPlanIsleri;
 using SahaGor.Api.Hatalar;
 using SahaGor.Api.Hublar;
 using SahaGor.Api.Saglik;
 using SahaGor.Application.Bildirimler;
 using SahaGor.Infrastructure;
 using SahaGor.Infrastructure.Entegrasyonlar;
+using SahaGor.Infrastructure.Gorevler;
 using SahaGor.Infrastructure.Kimlik;
 using SahaGor.Infrastructure.Saglik;
 using Serilog;
@@ -86,6 +88,12 @@ try
         ?? throw new InvalidOperationException($"'{Hat153EntegrasyonAyarlari.BolumAdi}' yapilandirma bolumu bulunamadi.");
     hat153Ayarlari.Dogrula();
 
+    // SLA alarm tarama araliginin/esiginin gecerli olmasi da baslangicta dogrulanir; aksi halde
+    // (orn. yanlislikla 0 saniyelik bir tarama araligi girilirse) sistem sessizce yanlis davranir.
+    var slaAlarmAyarlari = builder.Configuration.GetSection(SlaAlarmAyarlari.BolumAdi).Get<SlaAlarmAyarlari>()
+        ?? throw new InvalidOperationException($"'{SlaAlarmAyarlari.BolumAdi}' yapilandirma bolumu bulunamadi.");
+    slaAlarmAyarlari.Dogrula();
+
     builder.Services
         .AddAuthentication(options =>
         {
@@ -141,6 +149,11 @@ try
     builder.Services.AddSignalR();
     builder.Services.AddScoped<IGorevBildirimYayinlayici, SignalRBildirimYayinlayici>();
     builder.Services.AddScoped<IEkipBildirimYayinlayici, SignalRBildirimYayinlayici>();
+    builder.Services.AddScoped<ISlaAlarmYayinlayici, SignalRBildirimYayinlayici>();
+
+    // SG-410: acik gorevleri periyodik olarak SLA esiklerine gore tarayip alarm yayinlayan
+    // arka plan servisi. Uygulama ile birlikte baslar ve host kapatilana kadar calisir.
+    builder.Services.AddHostedService<SlaAlarmArkaPlanServisi>();
 
     // Veritabani/PostGIS baglanti durumunun dogrulanabilmesi icin (SG-142).
     builder.Services.AddHealthChecks()

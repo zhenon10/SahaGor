@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.Configure<JwtAyarlari>(configuration.GetSection(JwtAyarlari.BolumAdi));
         services.Configure<DosyaDepolamaAyarlari>(configuration.GetSection(DosyaDepolamaAyarlari.BolumAdi));
         services.Configure<Hat153EntegrasyonAyarlari>(configuration.GetSection(Hat153EntegrasyonAyarlari.BolumAdi));
+        services.Configure<SlaAlarmAyarlari>(configuration.GetSection(SlaAlarmAyarlari.BolumAdi));
 
         services.AddSingleton<ISifreHashleyici, BcryptSifreHashleyici>();
         services.AddSingleton<IJwtTokenUretici, JwtTokenUretici>();
@@ -64,6 +65,7 @@ public static class DependencyInjection
         services.AddScoped<IEkipServisi, EkipServisi>();
         services.AddScoped<IAtamaMotoru, AtamaMotoru>();
         services.AddScoped<IDisKaynakBasvuruServisi, DisKaynakBasvuruServisi>();
+        services.AddScoped<ISlaAlarmTarayiciServisi, SlaAlarmTarayiciServisi>();
 
         return services;
     }

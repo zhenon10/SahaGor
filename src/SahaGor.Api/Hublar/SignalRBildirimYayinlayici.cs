@@ -10,7 +10,7 @@ namespace SahaGor.Api.Hublar;
 /// SignalR'den tamamen habersiz kalir (bagimlilik tersine cevirme - somut adaptor en
 /// diste, sozlesme ic katmanda).
 /// </summary>
-public sealed class SignalRBildirimYayinlayici : IGorevBildirimYayinlayici, IEkipBildirimYayinlayici
+public sealed class SignalRBildirimYayinlayici : IGorevBildirimYayinlayici, IEkipBildirimYayinlayici, ISlaAlarmYayinlayici
 {
     private readonly IHubContext<GorevTalebiHub, IGorevTalebiHubClient> _hubContext;
 
@@ -31,5 +31,12 @@ public sealed class SignalRBildirimYayinlayici : IGorevBildirimYayinlayici, IEki
         return _hubContext.Clients
             .Group(GorevTalebiHub.AmirPaneliGrubu)
             .EkipKonumuGuncellendi(bildirim, iptalToken);
+    }
+
+    public Task YayinlaAsync(SlaAlarmBildirimi bildirim, CancellationToken iptalToken = default)
+    {
+        return _hubContext.Clients
+            .Group(GorevTalebiHub.AmirPaneliGrubu)
+            .SlaAlarmiTetiklendi(bildirim, iptalToken);
     }
 }

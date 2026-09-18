@@ -82,6 +82,13 @@ public class GorevTalebi : TemelVarlik
 
     public DateTime? IptalZamaniUtc { get; private set; }
 
+    /// <summary>SG-411: "SLA'ya yaklasiliyor" alarmi bir kez gonderildikten sonra taramanin
+    /// ayni alarmi tekrar tekrar (her tarama dongusunde) gondermesini onlemek icin isaretlenir.</summary>
+    public DateTime? SlaYaklasmaAlarmiZamaniUtc { get; private set; }
+
+    /// <summary>SG-411: "SLA ihlal edildi" alarmi icin ayni tekrar-onleme amaciyla kullanilir.</summary>
+    public DateTime? SlaIhlalAlarmiZamaniUtc { get; private set; }
+
     public IReadOnlyCollection<GorevFotografi> Fotograflar => _fotograflar.AsReadOnly();
 
     public IReadOnlyCollection<GorevDurumGecmisi> DurumGecmisi => _durumGecmisi.AsReadOnly();
@@ -262,6 +269,14 @@ public class GorevTalebi : TemelVarlik
         var gecenSureDakika = (simdi - OlusturulmaZamaniUtc).TotalMinutes;
         return Math.Clamp(gecenSureDakika / toplamSureDakika * 100, 0, 100);
     }
+
+    /// <summary>SLA arka plan tarama servisi, "yaklasiyor" alarmini gonderdikten sonra bu gorevi isaretler (SG-411).</summary>
+    public void SlaYaklasmaAlarmiGonderildiOlarakIsaretle(DateTime? zamanUtc = null) =>
+        SlaYaklasmaAlarmiZamaniUtc = zamanUtc ?? DateTime.UtcNow;
+
+    /// <summary>SLA arka plan tarama servisi, "ihlal edildi" alarmini gonderdikten sonra bu gorevi isaretler (SG-411).</summary>
+    public void SlaIhlalAlarmiGonderildiOlarakIsaretle(DateTime? zamanUtc = null) =>
+        SlaIhlalAlarmiZamaniUtc = zamanUtc ?? DateTime.UtcNow;
 
     private void DurumGecisiniDogrula(GorevDurumu hedefDurum)
     {

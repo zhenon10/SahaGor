@@ -13,4 +13,7 @@ public interface IGorevTalebiHubClient
 
     /// <summary>Bir ekibin canli konumu guncellendiginde tetiklenir (SG-301, SG-302).</summary>
     Task EkipKonumuGuncellendi(EkipKonumBildirimi bildirim, CancellationToken iptalToken = default);
+
+    /// <summary>Bir gorev SLA esigine yaklastiginda veya SLA'yi ihlal ettiginde tetiklenir (SG-410, SG-411).</summary>
+    Task SlaAlarmiTetiklendi(SlaAlarmBildirimi bildirim, CancellationToken iptalToken = default);
 }
