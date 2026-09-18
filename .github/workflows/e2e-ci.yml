@@ -1,0 +1,135 @@
+name: E2E CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+
+    services:
+      # SG-421: gercek PostgreSQL/PostGIS - docker-compose.yml'deki ile ayni imaj.
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_DB: sahagor
+          POSTGRES_USER: sahagor_user
+          POSTGRES_PASSWORD: e2e_test_ortami_sifresi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sahagor_user -d sahagor"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Production
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: sahagor
+      POSTGRES_USER: sahagor_user
+      POSTGRES_PASSWORD: e2e_test_ortami_sifresi
+      # Sadece bu CI is'i icin uretilen, gercek/production ile ilgisi olmayan degerlerdir.
+      Jwt__Anahtar: e2e-test-ortami-icin-en-az-32-karakter-uzunlugunda-anahtar-degeri
+      Entegrasyonlar__Hat153__PaylasilanGizliAnahtar: e2e-test-ortami-icin-16-karakter-anahtar
+      API_BASE_URL: http://localhost:5299
+
+    steps:
+      - name: Kodu getir
+        uses: actions/checkout@v4
+
+      - name: .NET 8 SDK kurulumu
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: dotnet-ef aracini kur
+        run: dotnet tool install --global dotnet-ef --version 8.0.10
+
+      - name: Veritabani migration'larini uygula
+        run: >
+          dotnet ef database update
+          --project src/SahaGor.Infrastructure/SahaGor.Infrastructure.csproj
+          --startup-project src/SahaGor.Api/SahaGor.Api.csproj
+
+      - name: Api'yi yayinla ve arka planda baslat
+        run: |
+          dotnet publish src/SahaGor.Api/SahaGor.Api.csproj -c Release -o ./publish-api
+          ASPNETCORE_URLS=http://localhost:5299 nohup dotnet ./publish-api/SahaGor.Api.dll > api.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5299/health > /dev/null; then
+              echo "Api hazir."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Api zamaninda ayaga kalkmadi."
+          cat api.log
+          exit 1
+
+      - name: Node.js kurulumu
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Web bagimliliklarini yukle
+        working-directory: web
+        run: npm ci
+
+      - name: Playwright taraycisini kur
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Web uygulamasini derle (standalone)
+        working-directory: web
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:5299
+
+      - name: Web uygulamasini arka planda baslat
+        working-directory: web
+        run: |
+          cp -r public .next/standalone/
+          cp -r .next/static .next/standalone/.next/
+          PORT=3000 nohup node .next/standalone/server.js > web.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/giris > /dev/null; then
+              echo "Web uygulamasi hazir."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Web uygulamasi zamaninda ayaga kalkmadi."
+          cat web.log
+          exit 1
+
+      - name: E2E testlerini calistir
+        working-directory: web
+        run: npx playwright test
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          E2E_API_BASE_URL: http://localhost:5299
+
+      - name: Playwright raporunu artifact olarak yukle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-raporu
+          path: web/playwright-report/
+          retention-days: 14
+
+      - name: Api/Web loglarini artifact olarak yukle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-loglari
+          path: |
+            api.log
+            web/web.log
+          retention-days: 14
