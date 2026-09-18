@@ -14,8 +14,8 @@ export const SeedSistemYoneticisi = {
   sifre: "DegistirilmeliSifre#2026",
 };
 
-/** Migration seed verisindeki sabit gorev kategorisi adi. */
-export const SeedKategoriAdi = "Kırık Kaldırım";
+/** Migration seed verisindeki sabit gorev kategorisi adi (bkz. GorevKategorisiConfiguration). */
+export const SeedKategoriAdi = "Kırık Kaldırım / Yol Bozukluğu";
 
 export async function girisYapVeTokenAl(istekBaglami: APIRequestContext): Promise<string> {
   const yanit = await istekBaglami.post(`${E2eApiTabanAdresi}/api/auth/login`, {
