@@ -58,8 +58,12 @@ jobs:
 
       - name: Api'yi yayinla ve arka planda baslat
         run: |
-          dotnet publish src/SahaGor.Api/SahaGor.Api.csproj -c Release -o ./publish-api
-          ASPNETCORE_URLS=http://localhost:5299 nohup dotnet ./publish-api/SahaGor.Api.dll > api.log 2>&1 &
+          dotnet publish src/SahaGor.Api/SahaGor.Api.csproj -c Release -o "$GITHUB_WORKSPACE/publish-api"
+          # appsettings.json, calisma dizinine (Directory.GetCurrentDirectory) gore aranir; bu
+          # yuzden DLL'in bulundugu dizine gecmeden calistirmak (orn. repo kokunden) "appsettings.json
+          # bulunamadi" gibi sessiz yapilandirma hatalarina yol acar - Docker'daki WORKDIR /app
+          # ile ayni CWD garantisini burada "cd" ile sagliyoruz.
+          (cd "$GITHUB_WORKSPACE/publish-api" && ASPNETCORE_URLS=http://localhost:5299 nohup dotnet SahaGor.Api.dll > "$GITHUB_WORKSPACE/api.log" 2>&1 &)
           for i in $(seq 1 30); do
             if curl -sf http://localhost:5299/health > /dev/null; then
               echo "Api hazir."
