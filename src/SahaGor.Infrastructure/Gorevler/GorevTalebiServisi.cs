@@ -236,20 +236,39 @@ public sealed class GorevTalebiServisi : IGorevTalebiServisi
         // Geography kolonunda IsWithinDistance -> ST_DWithin(...), Distance -> ST_Distance(...)
         // olarak Npgsql.NetTopologySuite eklentisi tarafindan cevrilir; GiST index sayesinde
         // (bkz. GorevTalebiConfiguration) bu sorgu tum tabloyu taramadan calisir.
-        return await _dbContext.GorevTalepleri
+        //
+        // ONEMLI (SG-420'de gercek PostGIS'e karsi ortaya cikan hata): ST_X/ST_Y, "geography"
+        // kolon tipi icin PostGIS'te TANIMLI DEGILDIR (sadece "geometry" icin vardir). Bu yuzden
+        // g.Konum.X/g.Konum.Y ifadeleri IQueryable Select() icinde (yani SQL'e cevrilecek sekilde)
+        // KULLANILAMAZ. Cozum: Konum'un tamamini (ham deger, fonksiyon cagrisi gerektirmez) SQL
+        // seviyesinde secip, X/Y degerlerini ENTITY'LER BELLEGE ALINDIKTAN SONRA, materyalize
+        // edilmis NetTopologySuite Point nesnesinin duz C# ozellikleri olarak okuruz.
+        var sorguSonuclari = await _dbContext.GorevTalepleri
             .Where(g => !acikOlmayanDurumlar.Contains(g.Durum))
             .Where(g => g.Konum.IsWithinDistance(merkezNokta, yaricapMetre))
             .OrderBy(g => g.Konum.Distance(merkezNokta))
             .Take(maksimumSonucSayisi)
+            .Select(g => new
+            {
+                g.Id,
+                g.Baslik,
+                g.Durum,
+                g.Oncelik,
+                MesafeMetre = g.Konum.Distance(merkezNokta),
+                g.Konum,
+            })
+            .ToListAsync(iptalToken);
+
+        return sorguSonuclari
             .Select(g => new YakinimdakiGorevYaniti(
                 g.Id,
                 g.Baslik,
                 g.Durum.ToString(),
                 g.Oncelik.ToString(),
-                g.Konum.Distance(merkezNokta),
+                g.MesafeMetre,
                 g.Konum.Y,
                 g.Konum.X))
-            .ToListAsync(iptalToken);
+            .ToList();
     }
 
     public async Task IptalEtAsync(Guid id, string neden, Guid iptalEdenPersonelId, CancellationToken iptalToken = default)

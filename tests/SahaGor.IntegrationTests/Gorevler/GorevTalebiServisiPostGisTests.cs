@@ -112,9 +112,12 @@ public class GorevTalebiServisiPostGisTests
             slaCozumSuresiDakika: 480);
         dbContext.GorevKategorileri.Add(kategori);
 
+        var kurum = new Kurum($"Test Kurum {Guid.NewGuid():N}");
+        dbContext.Kurumlar.Add(kurum);
+
         // Merkezi (41.0, 29.0) olan, yaklasik 0.02 derecelik (~2km) kare bir bolge siniri.
         var bolgePoligonu = KareBolgeOlustur(merkezEnlem: 41.0, merkezBoylam: 29.0, kenarUzunluguDerece: 0.02);
-        var bolge = new Bolge(Guid.NewGuid(), $"Test Bolge {Guid.NewGuid():N}", bolgePoligonu);
+        var bolge = new Bolge(kurum.Id, $"Test Bolge {Guid.NewGuid():N}", bolgePoligonu);
         dbContext.Bolgeler.Add(bolge);
         await dbContext.SaveChangesAsync();
 
