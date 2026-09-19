@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using SahaGor.Infrastructure.Persistence;
 namespace SahaGor.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SahaGorDbContext))]
-    partial class SahaGorDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260919063309_YenilemeJetonuHashlensin")]
+    partial class YenilemeJetonuHashlensin
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

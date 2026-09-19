@@ -11,11 +11,12 @@ public class YenilemeJetonuConfiguration : IEntityTypeConfiguration<YenilemeJeto
         builder.ToTable("yenileme_jetonlari");
         TemelVarlikYapilandirmasi.Uygula(builder);
 
-        builder.Property(j => j.Token).IsRequired().HasMaxLength(200);
+        // SHA-256 hex cikti sabit 64 karakterdir (bkz. YenilemeJetonu.TokenHash).
+        builder.Property(j => j.TokenHash).IsRequired().HasMaxLength(64);
         builder.Property(j => j.SonKullanmaZamaniUtc).IsRequired();
 
-        // Ayni jeton degeriyle iki kayit olusmasi (cakisma/tekrar uretim) engellenir.
-        builder.HasIndex(j => j.Token).IsUnique();
+        // Ayni jeton hash'iyle iki kayit olusmasi (cakisma/tekrar uretim) engellenir.
+        builder.HasIndex(j => j.TokenHash).IsUnique();
 
         builder.HasOne(j => j.Personel)
             .WithMany()

@@ -116,4 +116,20 @@ public class KimlikDogrulamaServisiTests
         await Assert.ThrowsAsync<GecersizYenilemeJetonuException>(() =>
             servis.TokenYenileAsync(new YenilemeIstegi("olmayan-bir-token-degeri")));
     }
+
+    [Fact]
+    public async Task Yenileme_tokeni_veritabaninda_duz_metin_olarak_DEGIL_hash_olarak_saklanir()
+    {
+        // OWASP A02 (Cryptographic Failures): veritabani bir sekilde ele gecirilirse
+        // (yedek sizintisi, ic tehdit vb.) saldirganin dogrudan kullanilabilir yenileme
+        // jetonlarina erismemesi gerekir - tipki sifreler gibi.
+        var (dbContext, servis, personel) = OrtamHazirla();
+
+        var giris = await servis.GirisYapAsync(new GirisIstegi(personel.KullaniciAdi, DogruSifre));
+
+        var kayitliJeton = await dbContext.YenilemeJetonlari.SingleAsync(j => j.PersonelId == personel.Id);
+
+        Assert.NotEqual(giris.YenilemeTokeni, kayitliJeton.TokenHash);
+        Assert.DoesNotContain(giris.YenilemeTokeni, kayitliJeton.TokenHash);
+    }
 }

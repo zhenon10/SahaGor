@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SahaGor.Application.Kimlik;
@@ -82,9 +84,10 @@ public sealed class KimlikDogrulamaServisi : IKimlikDogrulamaServisi
     {
         ArgumentNullException.ThrowIfNull(istek);
 
+        var gelenJetonHash = TokenHashOlustur(istek.YenilemeTokeni);
         var mevcutJeton = await _dbContext.YenilemeJetonlari
             .Include(j => j.Personel)
-            .FirstOrDefaultAsync(j => j.Token == istek.YenilemeTokeni, iptalToken);
+            .FirstOrDefaultAsync(j => j.TokenHash == gelenJetonHash, iptalToken);
 
         if (mevcutJeton is null || mevcutJeton.Personel is null || !mevcutJeton.GecerliMi())
         {
@@ -117,7 +120,7 @@ public sealed class KimlikDogrulamaServisi : IKimlikDogrulamaServisi
         var yenilemeTokeniDegeri = _jwtTokenUretici.YenilemeTokeniUret();
         var yenilemeSonKullanma = _jwtTokenUretici.YenilemeTokeniSonKullanmaZamaniHesapla();
 
-        var yeniYenilemeJetonu = new YenilemeJetonu(personel.Id, yenilemeTokeniDegeri, yenilemeSonKullanma);
+        var yeniYenilemeJetonu = new YenilemeJetonu(personel.Id, TokenHashOlustur(yenilemeTokeniDegeri), yenilemeSonKullanma);
         await _dbContext.YenilemeJetonlari.AddAsync(yeniYenilemeJetonu, iptalToken);
 
         return new GirisYaniti(
@@ -129,4 +132,13 @@ public sealed class KimlikDogrulamaServisi : IKimlikDogrulamaServisi
             personel.AdSoyad,
             personel.Rol.ToString());
     }
+
+    /// <summary>
+    /// Yenileme jetonu zaten kriptografik olarak guvenli, yuksek entropili rastgele bir deger
+    /// oldugundan (bkz. JwtTokenUretici.YenilemeTokeniUret), sifrelerde oldugu gibi yavas/salted
+    /// bir hash (BCrypt) yerine hizli SHA-256 yeterlidir; amac dusuk entropili girdilere karsi
+    /// brute-force'u yavaslatmak degil, veritabani sizintisinda jetonun dogrudan kullanilamamasidir.
+    /// </summary>
+    private static string TokenHashOlustur(string duzMetinToken) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(duzMetinToken)));
 }

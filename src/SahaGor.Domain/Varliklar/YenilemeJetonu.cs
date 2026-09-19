@@ -13,7 +13,13 @@ public class YenilemeJetonu : TemelVarlik
 
     public Personel? Personel { get; private set; }
 
-    public string Token { get; private set; } = null!;
+    /// <summary>
+    /// Jetonun kendisi DEGIL, SHA-256 hash'idir (OWASP A02 - Cryptographic Failures).
+    /// Sifrelerde oldugu gibi: veritabani bir sekilde ele gecirilirse (yedek sizintisi, ic tehdit
+    /// vb.) saldirganin dogrudan kullanilabilir jetonlara erismesini onler. Duz metin jeton
+    /// SADECE bir kez, uretildigi anda istemciye donulur ve hicbir yerde saklanmaz.
+    /// </summary>
+    public string TokenHash { get; private set; } = null!;
 
     public DateTime SonKullanmaZamaniUtc { get; private set; }
 
@@ -25,20 +31,20 @@ public class YenilemeJetonu : TemelVarlik
     {
     }
 
-    public YenilemeJetonu(Guid personelId, string token, DateTime sonKullanmaZamaniUtc)
+    public YenilemeJetonu(Guid personelId, string tokenHash, DateTime sonKullanmaZamaniUtc)
     {
         if (personelId == Guid.Empty)
         {
             throw new ArgumentException("Yenileme jetonu bir personele bagli olmalidir.", nameof(personelId));
         }
 
-        if (string.IsNullOrWhiteSpace(token))
+        if (string.IsNullOrWhiteSpace(tokenHash))
         {
-            throw new ArgumentException("Jeton degeri bos olamaz.", nameof(token));
+            throw new ArgumentException("Jeton hash degeri bos olamaz.", nameof(tokenHash));
         }
 
         PersonelId = personelId;
-        Token = token;
+        TokenHash = tokenHash;
         SonKullanmaZamaniUtc = sonKullanmaZamaniUtc;
     }
 
