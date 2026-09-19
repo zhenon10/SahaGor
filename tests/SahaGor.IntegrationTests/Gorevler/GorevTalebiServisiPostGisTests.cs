@@ -133,6 +133,35 @@ public class GorevTalebiServisiPostGisTests
         Assert.Equal(bolge.Ad, sonuc.BolgeAdi);
     }
 
+    [Fact]
+    public async Task ListeleAsync_Gercek_PostGIS_Konumunu_Enlem_Boylam_Olarak_Dogru_Doner()
+    {
+        await using var dbContext = _fixture.DbContextOlustur();
+
+        var kategori = new GorevKategorisi($"Test Kategori {Guid.NewGuid():N}", slaYanitSuresiDakika: 30,
+            slaCozumSuresiDakika: 480);
+        dbContext.GorevKategorileri.Add(kategori);
+
+        var baslik = $"Liste testi gorevi {Guid.NewGuid():N}";
+        var gorev = new GorevTalebi(baslik, kategori, KonumFabrikasi.NoktaOlustur(41.015137, 28.97953),
+            GorevOnceligi.Normal, GorevKaynagi.OperatorGirisi);
+        dbContext.GorevTalepleri.Add(gorev);
+        await dbContext.SaveChangesAsync();
+
+        var servis = ServisOlustur(dbContext);
+
+        // Bu cagri, ListeleAsync'in ic Select() ifadesinde g.Konum.Y/g.Konum.X'i SQL'e
+        // cevrilecek sekilde kullanip kullanmadigini dogrular; ST_Y/ST_X "geography" kolon
+        // tipinde PostGIS'te tanimli olmadigindan, InMemory saglayicisinda gecen ama gercek
+        // Postgres'e karsi "function st_y(geography) does not exist" hatasi veren bir hataydi.
+        var sonuc = await servis.ListeleAsync(new GorevTalebiFiltre { KategoriId = kategori.Id });
+
+        var kayit = Assert.Single(sonuc.Kayitlar);
+        Assert.Equal(baslik, kayit.Baslik);
+        Assert.Equal(41.015137, kayit.Enlem, precision: 5);
+        Assert.Equal(28.97953, kayit.Boylam, precision: 5);
+    }
+
     private static NetTopologySuite.Geometries.Polygon KareBolgeOlustur(double merkezEnlem, double merkezBoylam,
         double kenarUzunluguDerece)
     {

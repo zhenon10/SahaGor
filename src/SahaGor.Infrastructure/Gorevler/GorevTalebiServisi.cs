@@ -153,26 +153,46 @@ public sealed class GorevTalebiServisi : IGorevTalebiServisi
 
         var toplamKayitSayisi = await sorgu.CountAsync(iptalToken);
 
-        var kayitlar = await sorgu
+        // ONEMLI: ST_X/ST_Y, "geography" kolon tipi icin PostGIS'te tanimli degildir (bkz.
+        // YakinimdakiGetirAsync ustundeki aciklama). Konum'un tamami SQL seviyesinde secilip,
+        // X/Y degerleri entity'ler BELLEGE ALINDIKTAN SONRA okunur.
+        var sorguSonuclari = await sorgu
             .OrderByDescending(g => g.OlusturulmaZamaniUtc)
             .Skip((filtre.Sayfa - 1) * filtre.SayfaBoyutu)
             .Take(filtre.SayfaBoyutu)
+            .Select(g => new
+            {
+                g.Id,
+                g.Baslik,
+                KategoriAdi = g.Kategori!.Ad,
+                g.Durum,
+                g.Oncelik,
+                g.Konum,
+                BolgeAdi = g.Bolge != null ? g.Bolge.Ad : null,
+                AtananEkipAdi = g.AtananEkip != null ? g.AtananEkip.Ad : null,
+                g.OlusturulmaZamaniUtc,
+                g.SlaHedefZamaniUtc,
+                SlaIhlalEdildiMi = g.Durum != GorevDurumu.Tamamlandi &&
+                    g.Durum != GorevDurumu.Dogrulandi &&
+                    DateTime.UtcNow > g.SlaHedefZamaniUtc,
+            })
+            .ToListAsync(iptalToken);
+
+        var kayitlar = sorguSonuclari
             .Select(g => new GorevTalebiOzetYaniti(
                 g.Id,
                 g.Baslik,
-                g.Kategori!.Ad,
+                g.KategoriAdi,
                 g.Durum.ToString(),
                 g.Oncelik.ToString(),
                 g.Konum.Y,
                 g.Konum.X,
-                g.Bolge != null ? g.Bolge.Ad : null,
-                g.AtananEkip != null ? g.AtananEkip.Ad : null,
+                g.BolgeAdi,
+                g.AtananEkipAdi,
                 g.OlusturulmaZamaniUtc,
                 g.SlaHedefZamaniUtc,
-                g.Durum != GorevDurumu.Tamamlandi &&
-                    g.Durum != GorevDurumu.Dogrulandi &&
-                    DateTime.UtcNow > g.SlaHedefZamaniUtc))
-            .ToListAsync(iptalToken);
+                g.SlaIhlalEdildiMi))
+            .ToList();
 
         return new SayfalanmisSonuc<GorevTalebiOzetYaniti>(kayitlar, toplamKayitSayisi, filtre.Sayfa, filtre.SayfaBoyutu);
     }
