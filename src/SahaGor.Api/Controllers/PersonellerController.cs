@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SahaGor.Application.Birimler.Istisnalar;
@@ -8,7 +9,11 @@ using SahaGor.Domain.Enumlar;
 
 namespace SahaGor.Api.Controllers;
 
-/// <summary>Personel yonetimi CRUD uc noktalari (SG-110). Tum yonetim islemleri Amir/SistemYoneticisi ile sinirlidir.</summary>
+/// <summary>
+/// Personel yonetimi CRUD uc noktalari (SG-110). Yazma islemlerinin tumu ve tam liste
+/// Amir/SistemYoneticisi ile sinirlidir; tek istisna, herhangi bir kullanicinin SADECE
+/// KENDI kaydini goruntuleyebilmesidir (bkz. Detay).
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/personeller")]
@@ -46,6 +51,7 @@ public class PersonellerController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = YonetimRolleri)]
     [ProducesResponseType(typeof(IReadOnlyList<PersonelYaniti>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<PersonelYaniti>>> Listele(
         [FromQuery] Guid? birimId,
@@ -57,11 +63,27 @@ public class PersonellerController : ControllerBase
         return Ok(await _personelServisi.ListeleAsync(filtre, iptalToken));
     }
 
+    /// <summary>
+    /// Amir/SistemYoneticisi herkesin detayini gorebilir; diger roller (orn. mobil uygulamadaki
+    /// saha personeli, giris sonrasi JWT'de olmayan EkipId gibi bilgileri almak icin) SADECE
+    /// KENDI kaydini gorebilir (SG-423, OWASP A01 - Broken Access Control/IDOR). Bu kisitlama
+    /// olmadan herhangi bir gecerli JWT'ye sahip kullanici, ID'sini tahmin/elde ettigi HERHANGI
+    /// BIR personelin telefon/e-posta/kullanici adi gibi kisisel bilgilerine erisebilirdi.
+    /// </summary>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(PersonelYaniti), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PersonelYaniti>> Detay(Guid id, CancellationToken iptalToken)
     {
+        var yonetimRolundeMi = User.IsInRole(nameof(PersonelRolu.Amir)) || User.IsInRole(nameof(PersonelRolu.SistemYoneticisi));
+
+        if (!yonetimRolundeMi && GecerliPersonelId() != id)
+        {
+            return Problem(title: "Erisim yetkisi yok", detail: "Sadece kendi personel kaydinizi goruntuleyebilirsiniz.",
+                statusCode: StatusCodes.Status403Forbidden);
+        }
+
         try
         {
             return Ok(await _personelServisi.DetayGetirAsync(id, iptalToken));
@@ -120,5 +142,11 @@ public class PersonellerController : ControllerBase
         {
             return Problem(title: "Personel bulunamadi", detail: hata.Message, statusCode: StatusCodes.Status404NotFound);
         }
+    }
+
+    private Guid? GecerliPersonelId()
+    {
+        var deger = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(deger, out var id) ? id : null;
     }
 }
