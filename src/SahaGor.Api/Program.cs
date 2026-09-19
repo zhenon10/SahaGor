@@ -194,6 +194,28 @@ try
         app.UseSwagger();
         app.UseSwaggerUI();
     }
+    else
+    {
+        // SG-423 (OWASP A05 - Security Misconfiguration): tarayicilara, HTTPS baglantilarinin
+        // gelecekteki isteklerde de zorunlu tutulmasi gerektigini bildirir. Gelistirme
+        // ortaminda (genelde kendinden imzali/HTTPS'siz) sorun cikarmamasi icin sadece
+        // production'da (Development disinda) etkinlestirilir.
+        app.UseHsts();
+    }
+
+    // SG-423: API varsayilan olarak hicbir guvenlik header'i eklemez. Bu asgari, dusuk
+    // riskli fakat standart set (OWASP Secure Headers Project) tarayici tabanli bazi
+    // saldiri siniflarina karsi ek bir savunma katmani saglar. Content-Security-Policy
+    // bilerek eklenmedi: bu bir JSON API'dir (HTML render etmez), CSP esas olarak
+    // Swagger UI (sadece Development'ta acik) icin anlamli olur ve yanlis yapilandirilirsa
+    // Swagger'i bozabilir.
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        context.Response.Headers.Append("X-Frame-Options", "DENY");
+        context.Response.Headers.Append("Referrer-Policy", "no-referrer");
+        await next();
+    });
 
     app.UseHttpsRedirection();
 
