@@ -32,6 +32,26 @@ public sealed class DisKaynakBasvuruServisi : IDisKaynakBasvuruServisi
     public async Task<GorevTalebiDetayYaniti> Hat153BasvurusuIsleAsync(Hat153BasvuruIstegi istek,
         CancellationToken iptalToken = default)
     {
+        // Idempotentlik (SG-423, OWASP A04/A08): 153 sistemi aginin zaman asimi nedeniyle ayni
+        // basvuruyu tekrar gonderebilir, veya ayni imzali istek kotu niyetle tekrar oynatilabilir
+        // (replay). Ayni referans numarasiyla daha once islenmis bir gorev varsa, YENISINI
+        // OLUSTURMADAN mevcut olani doneriz. Veritabanindaki benzersiz index (bkz.
+        // GorevTalebiConfiguration) ayni anda gelen iki istek arasindaki yarisma durumuna
+        // (race condition) karsi son savunma hattidir.
+        if (!string.IsNullOrWhiteSpace(istek.ReferansNo))
+        {
+            var mevcutGorev = await _dbContext.GorevTalepleri
+                .FirstOrDefaultAsync(g => g.DisKaynakReferansNo == istek.ReferansNo, iptalToken);
+
+            if (mevcutGorev is not null)
+            {
+                _logger.LogInformation(
+                    "153 basvurusu ({ReferansNo}) daha once islenmis; mevcut gorev tekrar dondu.",
+                    istek.ReferansNo);
+                return await _gorevTalebiServisi.DetayGetirAsync(mevcutGorev.Id, iptalToken);
+            }
+        }
+
         var kategori = await _dbContext.GorevKategorileri
             .FirstOrDefaultAsync(k => k.Ad == istek.KategoriAdi && k.AktifMi, iptalToken)
             ?? throw new GorevKategorisiAdiylaBulunamadiException(istek.KategoriAdi);

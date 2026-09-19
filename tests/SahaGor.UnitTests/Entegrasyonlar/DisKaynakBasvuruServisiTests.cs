@@ -100,4 +100,24 @@ public class DisKaynakBasvuruServisiTests
         await Assert.ThrowsAsync<GorevKategorisiAdiylaBulunamadiException>(() =>
             servis.Hat153BasvurusuIsleAsync(istek));
     }
+
+    [Fact]
+    public async Task Hat153BasvurusuIsleAsync_Ayni_ReferansNo_Ile_Tekrar_Cagrilinca_Mukerrer_Gorev_Olusturmaz()
+    {
+        // SG-423 (OWASP A04/A08): 153 sisteminin ag zaman asimi nedeniyle ayni basvuruyu
+        // tekrar gondermesi (veya imzali bir istegin kotu niyetle tekrar oynatilmasi/replay)
+        // ayni ReferansNo icin ikinci bir gorev OLUSTURMAMALI, mevcut olani dondurmelidir.
+        using var dbContext = InBellekDbContextOlustur();
+        OrnekKategoriEkle(dbContext, "Kırık Kaldırım");
+
+        var servis = ServisOlustur(dbContext);
+        var istek = new Hat153BasvuruIstegi("153-2026-TEKRAR-001", "Kaldirim cokmus", null,
+            41.0, 29.0, "5551234567", "Kırık Kaldırım");
+
+        var ilkSonuc = await servis.Hat153BasvurusuIsleAsync(istek);
+        var ikinciSonuc = await servis.Hat153BasvurusuIsleAsync(istek);
+
+        Assert.Equal(ilkSonuc.Id, ikinciSonuc.Id);
+        Assert.Single(dbContext.GorevTalepleri);
+    }
 }

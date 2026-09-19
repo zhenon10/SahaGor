@@ -60,5 +60,16 @@ public class GorevTalebiConfiguration : IEntityTypeConfiguration<GorevTalebi>
 
         // "Yakinimdaki gorevler" (ST_DWithin) sorgusu icin mekansal index.
         builder.HasIndex(g => g.Konum).HasMethod("GIST");
+
+        // 153/CIMER gibi dis kaynaklardan ayni basvurunun (webhook tekrar denemesi veya
+        // sinyal tekrar oynatma/replay saldirisi sonucu) birden fazla kez islenip mukerrer
+        // gorev olusturmasini veritabani seviyesinde de engeller (SG-423, OWASP A04/A08).
+        // Uygulama katmanindaki "once kontrol et" mantigi (DisKaynakBasvuruServisi) yarisma
+        // durumuna (race condition) karsi tek basina yeterli degildir; bu index son savunma
+        // hattidir. Sadece NULL OLMAYAN degerler icin benzersizlik uygulanir (cogu gorevin
+        // dis kaynak referansi yoktur).
+        builder.HasIndex(g => g.DisKaynakReferansNo)
+            .IsUnique()
+            .HasFilter("\"DisKaynakReferansNo\" IS NOT NULL");
     }
 }
